@@ -1,15 +1,43 @@
-const functions = require("firebase-functions");
-const { google } = require('googleapis');
+const {google} = require('googleapis');
 const OAuth2 = google.auth.OAuth2;
 const calendar = google.calendar('v3');
+const functions = require('firebase-functions');
 
 const googleCredentials = require('./credentials.json');
 
 const ERROR_RESPONSE = {
   status: "500",
-  message: "There was an error adding an event to your google calendar!"
+  message: "There was an error adding an event to your Google calendar"
+};
+const TIME_ZONE = 'EST';
+
+function addEvent(event, auth) {
+  return new Promise(function(resolve, reject) {
+    calendar.events.insert({
+      auth: auth,
+      calendarId: 'primary',
+      resource: {
+        'summary': event.eventName,
+        'description': event.description,
+        'start': {
+          'dateTime': event.startTime,
+          'timeZone': TIME_ZONE,
+        },
+        'end': {
+          'dateTime': event.endTime,
+          'timeZone': TIME_ZONE,
+        },
+      },
+    }, (err, res) => {
+      if (err) {
+        console.log('Rejecting because of error');
+        reject(err);
+      }
+      console.log('Request successful');
+      resolve(res.data);
+    });
+  });
 }
-const TIME_ZONE = "EST";
 
 exports.addEventToCalendar = functions.https.onRequest((request, response) => {
   const eventData = {
@@ -32,8 +60,8 @@ exports.addEventToCalendar = functions.https.onRequest((request, response) => {
     response.status(200).send(data);
     return;
   }).catch(err => {
-    console.log('Error adding event' + err.message);
+    console.error('Error adding event: ' + err.message);
     response.status(500).send(ERROR_RESPONSE);
-    return
+    return;
   });
 });
